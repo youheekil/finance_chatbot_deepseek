@@ -34,4 +34,3 @@ for chat in reversed(st.session_state['chat_history']):
     st.write(f"**🧠 Assistant**: {chat['ollama']}")
     st.write("---")
 
-
