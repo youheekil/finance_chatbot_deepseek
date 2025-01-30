@@ -55,7 +55,6 @@ def build_rag_chain(retriever):
     prompt = """
         You are an assistant for financial data analysis. Use the retrieved context to answer questions. 
         If you don't know the answer, say so. 
-        Use bullet points to provide answers clearly.
         Question: {question}
         Context: {context}
         Answer:

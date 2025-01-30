@@ -115,7 +115,7 @@ question = st.text_input("Enter your question:", placeholder="e.g., What is the 
 if st.button("Submit Question") and question and selected_vector_db != "Upload New Document":
     with st.spinner("Answering your question..."):
         # Build retriever from the selected vector store
-        retriever = vector_store.as_retriever(search_type="mmr", search_kwargs={'k': 3})
+        retriever = vector_store.as_retriever(search_type="mmr", search_kwargs={'k': 5})
 
         # Build and run the RAG chain
         rag_chain = build_rag_chain(retriever)
