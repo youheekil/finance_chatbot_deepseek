@@ -1,28 +1,36 @@
-# https://www.youtube.com/watch?v=sNSoQ7k0JFY&list=PLc2rvfiptPSReropGbvDFpB6dneNBwqhD
-# pip install -U langchain langchain-community faiss-cpu langchain-ollama python-dotenv docling langchain-docling
-
+import os
 import streamlit as st
 from pathlib import Path
 from rag import load_and_convert_document, get_markdown_splits, create_or_load_vector_store, build_rag_chain
 from langchain_ollama import OllamaEmbeddings
-from langchain_community.vectorstores import FAISS  # Correct FAISS import
-from pdf2image import convert_from_path, exceptions  # Import exceptions for error handling
+from langchain_community.vectorstores import FAISS
+from pdf2image import convert_from_path, exceptions
+from PIL import Image
 
 # Path to vector DB folder
 VECTOR_DB_FOLDER = "vector_db"
+os.makedirs(VECTOR_DB_FOLDER, exist_ok=True)
 
 # Function to display PDF content as images in the sidebar
-def display_pdf_in_sidebar(pdf_path):
+def display_pdf_in_sidebar(pdf_path, file_name):
     try:
-        # Check if the file exists and is a valid PDF
-        if not Path(pdf_path).exists():
-            st.sidebar.error(f"PDF file {pdf_path} not found.")
-            return
+        images_folder = Path(VECTOR_DB_FOLDER) / file_name / "images"
+        os.makedirs(images_folder, exist_ok=True)
 
-        # Convert PDF to images (one per page). Removing the first_page and last_page limit to show all pages
-        images = convert_from_path(pdf_path)  # This will render all pages by default
-        for image in images:
-            st.sidebar.image(image, caption=f"Page {images.index(image) + 1}", use_container_width=True)  # Use new parameter
+        # Check if images already exist
+        image_paths = list(images_folder.glob("*.png"))
+        if image_paths:
+            # If images exist, display them
+            for img_path in image_paths:
+                image = Image.open(img_path)
+                st.sidebar.image(image, caption=f"Page {image_paths.index(img_path) + 1}", use_container_width=True)
+        else:
+            # Convert PDF to images (one per page)
+            images = convert_from_path(pdf_path)  # This will render all pages by default
+            for i, image in enumerate(images):
+                img_path = images_folder / f"page_{i + 1}.png"
+                image.save(img_path, "PNG")  # Save image to disk
+                st.sidebar.image(image, caption=f"Page {i + 1}", use_container_width=True)
 
     except exceptions.PDFPageCountError:
         st.sidebar.error("Error: Unable to get page count. The PDF may be corrupted or empty.")
@@ -50,11 +58,12 @@ if selected_vector_db == "Upload New Document":
 
         # Save the PDF file temporarily and display it
         temp_path = f"temp_{uploaded_file.name}"
+        document_binary = uploaded_file.read()
         with open(temp_path, "wb") as f:
-            f.write(uploaded_file.read())
+            f.write(document_binary)
 
         # Display PDF in the sidebar (show all pages)
-        display_pdf_in_sidebar(temp_path)
+        display_pdf_in_sidebar(temp_path, uploaded_file.name.split('.')[0])
 
         # PDF processing button
         if st.button("Process PDF and Store in Vector DB"):
@@ -74,9 +83,9 @@ if selected_vector_db == "Upload New Document":
                 vector_store.save_local(str(vector_db_path))  # Save FAISS vector store
 
                 # Store the PDF file alongside the vector DB
-                pdf_path = Path(VECTOR_DB_FOLDER) / f"{uploaded_file.name.split('.')[0]}.pdf"
+                pdf_path = Path(VECTOR_DB_FOLDER) / f"{uploaded_file.name}"
                 with open(pdf_path, "wb") as f:
-                    f.write(uploaded_file.read())
+                    f.write(document_binary)
 
                 st.success("PDF processed and stored in the vector database.")
 
@@ -93,7 +102,7 @@ elif selected_vector_db != "Upload New Document":
         # Display PDF in the sidebar
         pdf_path = Path(VECTOR_DB_FOLDER) / f"{selected_vector_db}.pdf"
         if pdf_path.exists():
-            display_pdf_in_sidebar(pdf_path)
+            display_pdf_in_sidebar(pdf_path, selected_vector_db)
         else:
             st.sidebar.warning("PDF file not found for the selected vector DB.")
     else:
@@ -111,9 +120,12 @@ if st.button("Submit Question") and question and selected_vector_db != "Upload N
         # Build and run the RAG chain
         rag_chain = build_rag_chain(retriever)
 
-        # Get response from the RAG chain
-        response = "".join(rag_chain.stream(question))
+        # Create a placeholder for streaming response
+        response_placeholder = st.empty()  # Create an empty placeholder for the answer
 
-        # Display the response
-        st.subheader("Answer:")
-        st.markdown(response.replace('$', '\\$'))
+        # Stream the response as it is generated
+        response = ""
+        for chunk in rag_chain.stream(question):
+            response += chunk  # Append each chunk of the response
+            response_placeholder.markdown(response.replace('$', '\\$'))  # Update the placeholder with the new response
+
