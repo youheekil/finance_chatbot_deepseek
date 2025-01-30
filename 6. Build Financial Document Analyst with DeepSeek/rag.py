@@ -1,7 +1,5 @@
-
 import os
 from pathlib import Path
-from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_text_splitters import MarkdownHeaderTextSplitter
