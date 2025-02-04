@@ -1,19 +1,22 @@
-def generate_fibonacci(n):
-    fib_sequence = []
-
+def fibonacci(n):
     if n < 0:
-        return []
+        print("Invalid input: Negative number")
+        return None
+    elif n == 0 or n == 1:
+        print(f"Fibonacci({n}) = {n}")
+        return n
+    else:
+        a, b = 0, 1
+        for i in range(2, n + 1):
+            next_num = a + b
+            print(f"Calculating Fibonacci({i}):")
+            print(f"a={a}, b={b}")
+            print(f"Next number: {next_num}")
+            a, b = b, next_num
+        print(f"Fibonacci({n}) = {b}")
+        return b
 
-    a, b = 0, 1
-
-    for _ in range(2, n + 1):  # Start from 2 to reach up to the nth number (inclusive)
-        fib_sequence.append(a)
-        a, b = a + b, a
-
-    if len(fib_sequence) > 0 and fib_sequence[-1] < n:
-        fib_sequence.pop()
-
-    return fib_sequence
-
-# Generate Fibonacci series up to 5
-print(generate_fibonacci(100))
+# Example usage:
+print("Fibonacci sequence up to 10:")
+for i in range(0, 11):
+    print(fibonacci(i))
